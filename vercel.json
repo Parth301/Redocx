@@ -16,7 +16,11 @@
     "routes": [
         {
             "src": "/api/(.*)",
-            "dest": "/api/$1"
+            "dest": "/api/format.js"
+        },
+        {
+            "src": "/(.*\\.(js|css|json|png|jpg|svg|ico))",
+            "dest": "/$1"
         },
         {
             "src": "/(.*)",
