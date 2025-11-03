@@ -3,8 +3,9 @@ import React, { useState } from "react";
 function LandingPage() {
     const [hoveredCard, setHoveredCard] = useState(null);
 
+    const navigate = useNavigate();
     const handleGetStarted = () => {
-        alert("Navigate to /format");
+        navigate("/format");
     };
 
     return (
