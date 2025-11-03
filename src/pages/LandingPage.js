@@ -1,12 +1,10 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 function LandingPage() {
     const [hoveredCard, setHoveredCard] = useState(null);
 
-    const navigate = useNavigate();
     const handleGetStarted = () => {
-        navigate("/format");
+        alert("Navigate to /format");
     };
 
     return (
@@ -149,6 +147,54 @@ function LandingPage() {
                     </div>
                 </div>
             </div>
+
+            <style>{`
+                @media (max-width: 768px) {
+                    .hero-title {
+                        font-size: 2.5rem !important;
+                    }
+                    .hero-subtitle {
+                        font-size: 1rem !important;
+                    }
+                    .main-cta {
+                        padding: 14px 28px !important;
+                        font-size: 1rem !important;
+                    }
+                    .feature-grid {
+                        grid-template-columns: 1fr !important;
+                    }
+                    .card-stack {
+                        width: 100% !important;
+                        max-width: 400px !important;
+                    }
+                    .stack-card {
+                        padding: 16px !important;
+                    }
+                    .logo-text {
+                        font-size: 1.1rem !important;
+                    }
+                    .logo-circle {
+                        width: 32px !important;
+                        height: 32px !important;
+                        font-size: 1rem !important;
+                    }
+                }
+                
+                @media (max-width: 480px) {
+                    .hero-title {
+                        font-size: 2rem !important;
+                    }
+                    .container {
+                        padding: 0 16px !important;
+                    }
+                    .features-title {
+                        font-size: 1.75rem !important;
+                    }
+                    .feature-emoji {
+                        font-size: 2.5rem !important;
+                    }
+                }
+            `}</style>
         </div>
     );
 }
@@ -158,6 +204,7 @@ const styles = {
         minHeight: "100vh",
         background: "linear-gradient(180deg, #FBEFFA 0%, #EBBAF2 50%, #FBEFFA 100%)",
         fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        overflowX: "hidden",
     },
     container: {
         maxWidth: "1100px",
@@ -191,17 +238,6 @@ const styles = {
         fontSize: "1.3rem",
         fontWeight: "700",
         color: "#463671",
-    },
-    tryBtn: {
-        background: "transparent",
-        border: "2px solid #EBBAF2",
-        borderRadius: "10px",
-        padding: "10px 20px",
-        fontSize: "0.95rem",
-        fontWeight: "600",
-        color: "#463671",
-        cursor: "pointer",
-        transition: "all 0.2s",
     },
     hero: {
         textAlign: "center",
@@ -335,7 +371,7 @@ const styles = {
     },
     featureGrid: {
         display: "grid",
-        gridTemplateColumns: "repeat(3, 1fr)",
+        gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
         gap: "32px",
     },
     featureCard: {
@@ -362,16 +398,5 @@ const styles = {
         lineHeight: "1.6",
     },
 };
-
-// Add responsive styles
-const styleSheet = document.createElement("style");
-styleSheet.textContent = `
-    @media (max-width: 768px) {
-        h1 { font-size: 2.5rem !important; }
-        .featureGrid { grid-template-columns: 1fr !important; }
-        .cardStack { width: 90% !important; }
-    }
-`;
-document.head.appendChild(styleSheet);
 
 export default LandingPage;
