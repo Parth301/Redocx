@@ -3,10 +3,10 @@ import React, { useState } from "react";
 function LandingPage() {
     const [hoveredCard, setHoveredCard] = useState(null);
 
-    const navigate = useNavigate();
     const handleGetStarted = () => {
-        navigate("/format");
-    };
+        console.log("Navigate to upload page");
+        window.location.href = "/format";
+    }
 
     return (
         <div style={styles.wrapper}>
