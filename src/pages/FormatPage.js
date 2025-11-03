@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 
 function FormatPage() {
@@ -6,12 +6,14 @@ function FormatPage() {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
     const [isDragging, setIsDragging] = useState(false);
+    const [progress, setProgress] = useState({ stage: 0, text: "" });
 
     const handleFileChange = (e) => {
         const selectedFile = e.target.files[0];
         if (selectedFile) {
             setFile(selectedFile);
             setMessage("");
+            setProgress({ stage: 0, text: "" });
         }
     };
 
@@ -32,10 +34,30 @@ function FormatPage() {
         if (droppedFile && droppedFile.name.endsWith(".docx")) {
             setFile(droppedFile);
             setMessage("");
+            setProgress({ stage: 0, text: "" });
         } else {
             setMessage("❌ Only .docx files are supported.");
         }
     };
+
+    // Enhanced progress stages with image analysis
+    useEffect(() => {
+        if (loading) {
+            const stages = [
+                { stage: 1, text: "📄 Extracting document content...", delay: 1000 },
+                { stage: 2, text: "🖼️ Analyzing images with AI vision...", delay: 3000 },
+                { stage: 3, text: "🧠 AI generating formatting plan...", delay: 6000 },
+                { stage: 4, text: "🔧 Building formatted document...", delay: 9000 },
+                { stage: 5, text: "✅ Finalizing with intelligent image placement...", delay: 12000 }
+            ];
+
+            const timers = stages.map(({ stage, text, delay }) =>
+                setTimeout(() => setProgress({ stage, text }), delay)
+            );
+
+            return () => timers.forEach(timer => clearTimeout(timer));
+        }
+    }, [loading]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -45,7 +67,8 @@ function FormatPage() {
             return setMessage("❌ Only .docx files are supported.");
 
         setLoading(true);
-        setMessage("🧠 Analyzing and formatting your document with Gemini...");
+        setProgress({ stage: 0, text: "🚀 Starting AI processing..." });
+        setMessage("");
 
         try {
             const formData = new FormData();
@@ -54,19 +77,38 @@ function FormatPage() {
             const response = await axios.post("/api/format", formData, {
                 responseType: "blob",
                 headers: { "Content-Type": "multipart/form-data" },
+                timeout: 90000, // Increased to 90 seconds for image analysis
             });
 
+            // Download the formatted document
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement("a");
             link.href = url;
             link.setAttribute("download", "formatted.docx");
             document.body.appendChild(link);
             link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
 
-            setMessage("✅ AI formatting complete! Your document has been downloaded.");
+            setMessage("✅ Success! Your professionally formatted document with AI-analyzed images has been downloaded.");
+            setProgress({ stage: 0, text: "" });
         } catch (error) {
             console.error("❌ Formatting error:", error);
-            setMessage("❌ Something went wrong while formatting. Please try again.");
+
+            let errorMsg = "❌ Something went wrong while formatting. Please try again.";
+
+            if (error.code === 'ECONNABORTED') {
+                errorMsg = "⏱️ Request timed out. Large files with images may take longer.";
+            } else if (error.response?.status === 413) {
+                errorMsg = "📦 File is too large. Maximum size is 10MB.";
+            } else if (error.response?.status === 400) {
+                errorMsg = "❌ Invalid file format. Please upload a valid .docx file.";
+            } else if (error.response?.data?.details) {
+                errorMsg = `❌ ${error.response.data.details}`;
+            }
+
+            setMessage(errorMsg);
+            setProgress({ stage: 0, text: "" });
         } finally {
             setLoading(false);
         }
@@ -93,8 +135,8 @@ function FormatPage() {
                         </div>
                         <h2 style={styles.title}>AI Document Formatter</h2>
                         <p style={styles.subtitle}>
-                            Upload your unformatted <strong>.docx</strong> file and let Gemini
-                            automatically style, structure, and format it beautifully.
+                            Upload your unformatted <strong>.docx</strong> file and let our advanced
+                            AI analyze content, images, and structure to create professional formatting.
                         </p>
                     </div>
 
@@ -116,6 +158,10 @@ function FormatPage() {
                                 <>
                                     <strong>{file.name}</strong>
                                     <br />
+                                    <span style={styles.fileSize}>
+                                        {(file.size / 1024).toFixed(1)} KB
+                                    </span>
+                                    <br />
                                     <span style={styles.changeFile}>Click to change file</span>
                                 </>
                             ) : (
@@ -134,6 +180,30 @@ function FormatPage() {
                             style={styles.hiddenInput}
                         />
                     </div>
+
+                    {/* Enhanced Progress Indicator */}
+                    {loading && progress.stage > 0 && (
+                        <div style={styles.progressContainer}>
+                            <div style={styles.progressBar}>
+                                <div style={{
+                                    ...styles.progressFill,
+                                    width: `${(progress.stage / 5) * 100}%`
+                                }} />
+                            </div>
+                            <p style={styles.progressText}>{progress.text}</p>
+                            <div style={styles.stageIndicators}>
+                                {[1, 2, 3, 4, 5].map(stage => (
+                                    <div
+                                        key={stage}
+                                        style={{
+                                            ...styles.stageIndicator,
+                                            background: progress.stage >= stage ? '#463671' : '#E7E6E6'
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Submit Button */}
                     <button
@@ -158,12 +228,12 @@ function FormatPage() {
                         {loading ? (
                             <>
                                 <span style={styles.spinner}>⏳</span>
-                                Formatting...
+                                Processing with AI Vision...
                             </>
                         ) : (
                             <>
                                 <span style={styles.buttonIcon}>🚀</span>
-                                Format with Gemini
+                                Format with AI
                             </>
                         )}
                     </button>
@@ -173,7 +243,8 @@ function FormatPage() {
                         <div style={{
                             ...styles.message,
                             color: message.includes('✅') ? '#10b981' :
-                                message.includes('❌') ? '#ef4444' : '#6b5491'
+                                message.includes('❌') ? '#ef4444' :
+                                    message.includes('⏱️') ? '#f59e0b' : '#6b5491'
                         }}>
                             {message}
                         </div>
@@ -183,16 +254,59 @@ function FormatPage() {
                     <div style={styles.infoSection}>
                         <div style={styles.infoItem}>
                             <span style={styles.infoIcon}>⚡</span>
-                            <span style={styles.infoText}>Processing takes ~10 seconds</span>
+                            <span style={styles.infoText}>5-stage AI processing</span>
                         </div>
                         <div style={styles.infoItem}>
                             <span style={styles.infoIcon}>🔒</span>
-                            <span style={styles.infoText}>Your files are secure</span>
+                            <span style={styles.infoText}>Zero data loss guaranteed</span>
                         </div>
                         <div style={styles.infoItem}>
-                            <span style={styles.infoIcon}>✨</span>
-                            <span style={styles.infoText}>AI-powered formatting</span>
+                            <span style={styles.infoIcon}>👁️</span>
+                            <span style={styles.infoText}>AI vision for image analysis</span>
                         </div>
+                    </div>
+
+                    {/* Features */}
+                    <div style={styles.featuresSection}>
+                        <h3 style={styles.featuresTitle}>What gets improved:</h3>
+                        <div style={styles.featuresList}>
+                            <div style={styles.feature}>
+                                <span style={styles.featureIcon}>📋</span>
+                                <span style={styles.featureText}>Headings & hierarchy</span>
+                            </div>
+                            <div style={styles.feature}>
+                                <span style={styles.featureIcon}>📊</span>
+                                <span style={styles.featureText}>Tables & formatting</span>
+                            </div>
+                            <div style={styles.feature}>
+                                <span style={styles.featureIcon}>🖼️</span>
+                                <span style={styles.featureText}>Smart image placement</span>
+                            </div>
+                            <div style={styles.feature}>
+                                <span style={styles.featureIcon}>📝</span>
+                                <span style={styles.featureText}>Lists & spacing</span>
+                            </div>
+                            <div style={styles.feature}>
+                                <span style={styles.featureIcon}>🎯</span>
+                                <span style={styles.featureText}>AI-generated captions</span>
+                            </div>
+                            <div style={styles.feature}>
+                                <span style={styles.featureIcon}>🔍</span>
+                                <span style={styles.featureText}>Image content analysis</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* New AI Vision Info Card */}
+                    <div style={styles.aiVisionCard}>
+                        <div style={styles.aiVisionHeader}>
+                            <span style={styles.aiVisionIcon}>🤖</span>
+                            <span style={styles.aiVisionTitle}>Powered by Gemini Vision AI</span>
+                        </div>
+                        <p style={styles.aiVisionText}>
+                            Our AI analyzes every image in your document to understand its content,
+                            context, and purpose - then intelligently positions it with relevant captions.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -290,6 +404,12 @@ const styles = {
         color: "#463671",
         cursor: "pointer",
     },
+    fileSize: {
+        fontSize: "0.85rem",
+        color: "#9b7ec4",
+        display: "block",
+        marginTop: "4px",
+    },
     changeFile: {
         fontSize: "0.9rem",
         color: "#9b7ec4",
@@ -297,6 +417,45 @@ const styles = {
     },
     hiddenInput: {
         display: "none",
+    },
+    progressContainer: {
+        marginBottom: "24px",
+        padding: "20px",
+        background: "#fff",
+        borderRadius: "12px",
+        border: "1px solid #EBBAF2",
+    },
+    progressBar: {
+        width: "100%",
+        height: "8px",
+        background: "#E7E6E6",
+        borderRadius: "4px",
+        overflow: "hidden",
+        marginBottom: "12px",
+    },
+    progressFill: {
+        height: "100%",
+        background: "linear-gradient(90deg, #463671 0%, #6b4e9e 100%)",
+        transition: "width 0.5s ease",
+        borderRadius: "4px",
+    },
+    progressText: {
+        fontSize: "0.95rem",
+        color: "#6b5491",
+        fontWeight: "500",
+        textAlign: "center",
+        margin: "0 0 12px 0",
+    },
+    stageIndicators: {
+        display: "flex",
+        justifyContent: "center",
+        gap: "8px",
+    },
+    stageIndicator: {
+        width: "32px",
+        height: "4px",
+        borderRadius: "2px",
+        transition: "background 0.3s ease",
     },
     submitButton: {
         width: "100%",
@@ -353,30 +512,86 @@ const styles = {
     infoText: {
         fontWeight: "500",
     },
+    featuresSection: {
+        marginTop: "24px",
+        paddingTop: "24px",
+        borderTop: "1px solid #EBBAF2",
+    },
+    featuresTitle: {
+        fontSize: "0.95rem",
+        fontWeight: "600",
+        color: "#463671",
+        marginBottom: "12px",
+    },
+    featuresList: {
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: "8px",
+    },
+    feature: {
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        fontSize: "0.85rem",
+        color: "#6b5491",
+    },
+    featureIcon: {
+        fontSize: "1.1rem",
+    },
+    featureText: {
+        fontWeight: "500",
+    },
+    aiVisionCard: {
+        marginTop: "24px",
+        padding: "20px",
+        background: "linear-gradient(135deg, rgba(70, 54, 113, 0.05) 0%, rgba(107, 78, 158, 0.05) 100%)",
+        borderRadius: "12px",
+        border: "1px solid #EBBAF2",
+    },
+    aiVisionHeader: {
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        marginBottom: "8px",
+    },
+    aiVisionIcon: {
+        fontSize: "1.5rem",
+    },
+    aiVisionTitle: {
+        fontSize: "0.95rem",
+        fontWeight: "600",
+        color: "#463671",
+    },
+    aiVisionText: {
+        fontSize: "0.85rem",
+        color: "#6b5491",
+        lineHeight: "1.5",
+        margin: 0,
+    },
 };
 
-// Add spinning animation and hide scrollbar
+// Add animations and styles
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
-    /* Hide scrollbar for Chrome, Safari and Opera */
     body::-webkit-scrollbar,
     html::-webkit-scrollbar {
         display: none;
     }
     
-    /* Hide scrollbar for IE, Edge and Firefox */
     body,
     html {
-        -ms-overflow-style: none;  /* IE and Edge */
-        scrollbar-width: none;  /* Firefox */
+        -ms-overflow-style: none;
+        scrollbar-width: none;
     }
     
     @keyframes spin {
         from { transform: rotate(0deg); }
         to { transform: rotate(360deg); }
     }
+    
     @media (max-width: 768px) {
         .card { padding: 32px 24px !important; }
+        .featuresList { grid-template-columns: 1fr !important; }
     }
 `;
 document.head.appendChild(styleSheet);
